@@ -102,9 +102,34 @@ lib/
 
 ---
 
-## Notes (fill this in when you submit)
+## Notes
 
-- **Design decisions:**
-- **What I skipped and why:**
-- **Actual time spent:**
-- **Questions or things you'd want to discuss in a review:**
+### Design decisions
+
+I chose a **client-side** integration (Google Places JS library loaded directly in the browser) over a server-side proxy, primarily to stay within the time budget. That said, for a production build I would recommend the server-side approach for two reasons:
+
+1. **API key security** — a server-side proxy keeps the key out of the browser entirely, so it can't be scraped from client bundles or network requests.
+2. **Abuse prevention** — with the key on the server we can enforce rate limiting and authenticate callers before any quota is consumed, which matters since the Places API is not free.
+
+The client-side approach is acceptable here because GCP allows referrer restrictions on API keys, which provides a reasonable mitigation.
+
+**PO Box support** — the form handles PO Boxes through graceful manual entry. The autocomplete query is restricted to US street addresses, so a PO Box typically won't appear in suggestions; the user simply types it directly and all fields remain fully editable. No special-casing is needed.
+
+**International extensibility** — the current implementation scopes suggestions to `country: "us"` and parses `address_components` against a US schema (street number, route, locality, administrative_area_level_1, postal_code). Extending to international addresses would require: (1) removing or parameterising the country restriction, and (2) making the parser aware that component availability and naming conventions vary by country (e.g. no postal_code in some regions, different locality hierarchies).
+
+### What I skipped and why
+
+| Item | Reason |
+|------|--------|
+| **Debounce on the street-address input** | Would reduce Places API calls on every keystroke; straightforward to add with a small `useDebounce` hook but cut for time. |
+| **End-to-end tests for unhappy paths** | No tests cover API errors, slow networks, or zero-result states. These should be covered before shipping. |
+| **Loading states** | The autocomplete input has no spinner or in-progress indicator while the Places API resolves suggestions. Adding a small loading indicator would improve perceived performance on slow connections, but was cut for time. |
+| **Cross-checking Places API field names** | The `address_components` type mapping was inferred from the SDK types rather than verified against the latest Places API docs — worth a review pass. |
+
+### Actual time spent
+
+~2 hours (excludes README write-up and submission).
+
+### Things I'd want to discuss in a review
+
+- **Routing** — I switched from the App Router to the Pages Router because I'm more productive there day-to-day. Happy to discuss whether that's the right call for a greenfield Flow project or revert to App Router if preferred.
