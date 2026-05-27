@@ -1,3 +1,4 @@
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 import Head from "next/head";
 import { useState } from "react";
 
@@ -63,14 +64,7 @@ const Page = () => {
 			<main className="mx-auto max-w-md p-6">
 				<h1 className="mb-6 text-2xl font-semibold">Shipping address</h1>
 				<form onSubmit={handleSubmit} className="space-y-4">
-					{/*
-            TODO: Replace the manual `line1` input below with an autocomplete-enabled
-            input that calls Google Places API and populates city/state/zip on selection.
-            See README.md for full requirements.
-          */}
-					<Field
-						label="Street address"
-						id="line1"
+					<AddressAutocomplete
 						value={form.line1}
 						onChange={handleChange("line1")}
 					/>
