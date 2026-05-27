@@ -1,17 +1,21 @@
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { parseAddressComponents } from "@/lib/places";
+import type { ParsedAddress } from "@/lib/places";
 
 interface Props {
 	value: string;
 	onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+	onSelect: (address: ParsedAddress) => void;
 }
 
-type Status = "initializing" | "ready" | "error";
+type Status = "initializing" | "ready" | "fetching" | "error";
 
-const AddressAutocomplete = ({ value, onChange }: Props) => {
+const AddressAutocomplete = ({ value, onChange, onSelect }: Props) => {
 	const serviceRef = useRef<google.maps.places.AutocompleteService | null>(
 		null,
 	);
+	const PlaceRef = useRef<typeof google.maps.places.Place | null>(null);
 	const [status, setStatus] = useState<Status>("initializing");
 	const [predictions, setPredictions] = useState<
 		google.maps.places.AutocompletePrediction[]
@@ -27,14 +31,14 @@ const AddressAutocomplete = ({ value, onChange }: Props) => {
 					key: process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? "",
 				});
 
-				const { AutocompleteService } = await importLibrary("places");
+				const { AutocompleteService, Place } = await importLibrary("places");
 
 				if (cancelled) return;
 
 				serviceRef.current = new AutocompleteService();
+				PlaceRef.current = Place;
 				setStatus("ready");
 			} catch {
-				console.error("error");
 				if (!cancelled) setStatus("error");
 			}
 		};
@@ -42,7 +46,6 @@ const AddressAutocomplete = ({ value, onChange }: Props) => {
 		init();
 
 		return () => {
-			// cancelled ensures that we never resolve a promise on an unmounted component (memory leak)
 			cancelled = true;
 		};
 	}, []);
@@ -50,15 +53,20 @@ const AddressAutocomplete = ({ value, onChange }: Props) => {
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		onChange(e);
 
-    const input = e.target.value;
+		const input = e.target.value;
 
 		if (!input || !serviceRef.current) {
 			setPredictions([]);
 			setShowDropdown(false);
 			return;
 		}
+
 		serviceRef.current.getPlacePredictions(
-			{ input, types: ["address"], componentRestrictions: { country: "us" } },
+			{
+				input,
+				types: ["address"],
+				componentRestrictions: { country: "us" },
+			},
 			(results, serviceStatus) => {
 				if (
 					serviceStatus === google.maps.places.PlacesServiceStatus.OK &&
@@ -74,6 +82,31 @@ const AddressAutocomplete = ({ value, onChange }: Props) => {
 		);
 	};
 
+	const handlePredictionSelect = async (
+		prediction: google.maps.places.AutocompletePrediction,
+	) => {
+		if (!PlaceRef.current) return;
+
+		setStatus("fetching");
+		setShowDropdown(false);
+
+		try {
+			const place = new PlaceRef.current({ id: prediction.place_id });
+			await place.fetchFields({ fields: ["addressComponents"] });
+			onSelect(
+				parseAddressComponents(
+					(place.addressComponents ?? []) as Parameters<
+						typeof parseAddressComponents
+					>[0],
+				),
+			);
+		} catch {
+			// fetchFields failed; user can fill remaining fields manually.
+		} finally {
+			setStatus("ready");
+		}
+	};
+
 	if (status === "error") {
 		return (
 			<div>
@@ -85,7 +118,7 @@ const AddressAutocomplete = ({ value, onChange }: Props) => {
 					name="line1"
 					type="text"
 					value={value}
-					onChange={(e) => onChange(e.target.value)}
+					onChange={onChange}
 					placeholder="Enter your address"
 					className="w-full rounded-md border border-gray-300 px-3 py-2 outline-none focus:border-green-800 focus:ring-1 focus:ring-green-800"
 				/>
@@ -120,6 +153,7 @@ const AddressAutocomplete = ({ value, onChange }: Props) => {
 							{predictions.map((p) => (
 								<li
 									key={p.place_id}
+									onMouseDown={() => handlePredictionSelect(p)}
 									className="cursor-pointer px-3 py-2 text-sm hover:bg-gray-50"
 								>
 									{p.description}
@@ -128,6 +162,9 @@ const AddressAutocomplete = ({ value, onChange }: Props) => {
 						</ul>
 					)}
 				</>
+			)}
+			{status === "fetching" && (
+				<p className="mt-1 text-xs text-gray-500">Loading address details…</p>
 			)}
 		</div>
 	);

@@ -1,4 +1,5 @@
 import AddressAutocomplete from "@/components/AddressAutocomplete";
+import type { ParsedAddress } from "@/lib/places";
 import Head from "next/head";
 import { useState } from "react";
 
@@ -49,6 +50,10 @@ const Page = () => {
 			setForm((prev) => ({ ...prev, [field]: e.target.value }));
 		};
 
+	const handleSelect = (address: ParsedAddress) => {
+		setForm((prev) => ({ ...prev, ...address }));
+	};
+
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		// Logging is fine for the take-home; no real submission needed.
@@ -67,6 +72,7 @@ const Page = () => {
 					<AddressAutocomplete
 						value={form.line1}
 						onChange={handleChange("line1")}
+						onSelect={handleSelect}
 					/>
 					<Field
 						label="Apt, suite, etc. (optional)"
