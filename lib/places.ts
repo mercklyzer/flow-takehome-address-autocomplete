@@ -7,10 +7,10 @@
 
 /** Normalized US address shape used by the checkout form. */
 export type ParsedAddress = {
-  line1: string;
-  city: string;
-  state: string;
-  zip: string;
+	line1: string;
+	city: string;
+	state: string;
+	zip: string;
 };
 
 /**
@@ -18,9 +18,9 @@ export type ParsedAddress = {
  * See: https://developers.google.com/maps/documentation/places/web-service/details
  */
 export type AddressComponent = {
-  long_name: string;
-  short_name: string;
-  types: string[];
+	long_name: string;
+	short_name: string;
+	types: string[];
 };
 
 /**
@@ -33,8 +33,8 @@ export type AddressComponent = {
  * - Missing components should result in empty strings (do not throw).
  */
 export function parseAddressComponents(
-  components: AddressComponent[],
+	components: AddressComponent[],
 ): ParsedAddress {
-  // TODO: implement
-  throw new Error("Not implemented");
+	// TODO: implement
+	throw new Error("Not implemented");
 }
